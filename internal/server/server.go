@@ -1,11 +1,12 @@
 package server
 
 import (
+	"context"
+
 	"authorization_flow_keycloak/internal/auth"
 	"authorization_flow_keycloak/internal/config"
 	"authorization_flow_keycloak/internal/handlers"
 	"authorization_flow_keycloak/internal/store"
-	"context"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -22,11 +23,15 @@ func NewServer(ctx context.Context,
 	authClient *auth.Client,
 	redisClient *redis.Client,
 ) *Server {
+	router := gin.Default()
+	// / Load HTML templates
+	router.LoadHTMLGlob("templates/*.html") // Make sure to create a templates directory
+
 	authStore := store.NewAuthRedisManager(redisClient)
 	authHandler := handlers.NewAuthHandler(authClient, authStore)
 
 	server := &Server{
-		router:      gin.Default(),
+		router:      router,
 		config:      cfg,
 		authHandler: authHandler,
 	}
@@ -39,12 +44,16 @@ func (s *Server) setupRoutes() {
 	// Health check
 	s.router.GET("/health", s.healthCheck)
 
+	// Serve login page
+	s.router.GET("/", s.authHandler.ShowLoginPage)
+
 	// Auth routes will be added later
 	auth := s.router.Group("/auth")
 	{
 		auth.GET("/login", s.authHandler.LoginHandler)
 		auth.GET("/callback", s.handleCallback)
 	}
+
 }
 
 func (s *Server) healthCheck(c *gin.Context) {

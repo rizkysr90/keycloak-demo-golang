@@ -62,3 +62,8 @@ func (a *AuthHandler) LoginHandler(c *gin.Context) {
 	// Redirect to Keycloak login page
 	c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
+
+// Add this method to server.go
+func (a *AuthHandler) ShowLoginPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "login.html", nil)
+}
