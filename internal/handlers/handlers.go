@@ -5,17 +5,22 @@ import (
 	"encoding/base64"
 	"net/http"
 
+	"authorization_flow_keycloak/internal/auth"
+	"authorization_flow_keycloak/internal/store"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 )
 
 type AuthHandler struct {
-	oauth2Config *oauth2.Config
+	authClient *auth.Client
+	authStore  store.AuthStore
 }
 
-func NewAuthHandler(config *oauth2.Config) *AuthHandler {
+func NewAuthHandler(authClient *auth.Client, authStore store.AuthStore) *AuthHandler {
 	return &AuthHandler{
-		oauth2Config: config,
+		authClient: authClient,
+		authStore:  authStore,
 	}
 }
 
@@ -28,8 +33,14 @@ func generateState() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-// LoginHandler initiates the OAuth2 login flow
-func (h *AuthHandler) LoginHandler(c *gin.Context) {
+// LoginHandler initiates the OAuth2 authorization code flow with Keycloak.
+// It generates a secure state parameter to prevent CSRF attacks and stores it
+// in Redis for later verification during the callback phase.
+//
+// Returns:
+// - 302: Redirects to Keycloak login page
+// - 500: Internal Server Error if state generation or storage fails
+func (a *AuthHandler) LoginHandler(c *gin.Context) {
 	state, err := generateState()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state"})
@@ -37,18 +48,15 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 	}
 
 	// Store state in session for later verification
-	session := sessions.Default(c)
-	session.Set("oauth2_state", state)
-	if err := session.Save(); err != nil {
+	if err = a.authStore.SetState(c, state); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
-
 	// Build authentication URL
-	authURL := h.oauth2Config.AuthCodeURL(
+	authURL := a.authClient.Oauth.AuthCodeURL(
 		state,
-		oauth2.AccessTypeOffline,
-		oauth2.SetAuthURLParam("prompt", "consent"),
+		oauth2.SetAuthURLParam("response_type", "code"),
+		oauth2.SetAuthURLParam("scope", "openid profile email"),
 	)
 
 	// Redirect to Keycloak login page
