@@ -1,9 +1,12 @@
 package server
 
 import (
+	"authorization_flow_keycloak/internal/auth"
 	"authorization_flow_keycloak/internal/config"
+	"context"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type Server struct {
@@ -11,10 +14,14 @@ type Server struct {
 	config *config.Config
 }
 
-func NewServer(config *config.Config) *Server {
+func NewServer(ctx context.Context,
+	cfg *config.Config,
+	authClient *auth.Client,
+	redisClient *redis.Client,
+) *Server {
 	server := &Server{
 		router: gin.Default(),
-		config: config,
+		config: cfg,
 	}
 
 	server.setupRoutes()
