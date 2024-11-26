@@ -5,6 +5,9 @@ import (
 
 	"authorization_flow_keycloak/internal/config"
 	"authorization_flow_keycloak/internal/server"
+	"authorization_flow_keycloak/internal/store"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -15,6 +18,9 @@ func main() {
 	}
 	// Use configuration values
 	log.Printf("Starting server on port %s", config.App.Port)
+
+	rdb := redis.NewClient(config.RedisClient)
+	authStore := store.NewAuthRedisManager(rdb)
 
 	// Create and start server
 	srv := server.NewServer(config)
