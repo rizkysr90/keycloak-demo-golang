@@ -113,19 +113,18 @@ func (a *AuthHandler) CallbackHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store session"})
 		return
 	}
-	// Set secure session cookie using Gin's methods
-	c.SetCookie(
-		"session_id",                            // name
-		sessionID,                               // value
-		int(constant.SessionDuration.Seconds()), // maxAge in seconds
-		"/",                                     // path
-		"",                                      // domain (empty means default to current domain)
-		true,                                    // secure (HTTPS only)
-		true,                                    // httpOnly (prevents JavaScript access)
-	)
-	// Set SameSite attribute
 	// Note: Gin handles SameSite through the Config struct
 	c.SetSameSite(http.SameSiteStrictMode)
+	// Set secure session cookie using Gin's methods
+	c.SetCookie(
+		"session_id",                  // name
+		sessionID,                     // value
+		int(constant.SessionDuration), // maxAge in seconds
+		"/",                           // path
+		"",                            // domain (empty means default to current domain)
+		false,                         // Set secure to false for HTTP development
+		true,                          // httpOnly (prevents JavaScript access)
+	)
 
 	// Redirect to dashboard using Gin's redirect method
 	c.Redirect(http.StatusTemporaryRedirect, "/dashboard")
@@ -181,16 +180,16 @@ func (a *AuthHandler) validateAndGetClaimsIDToken(
 	// Get and validate the ID token - this proves the user's identity
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
 	if !ok {
-		return nil, errors.New("No ID token found")
+		return nil, errors.New("no ID token found")
 	}
 	// Verify the ID token
 	idToken, err := a.authClient.OIDC.Verify(c.Request.Context(), rawIDToken)
 	if err != nil {
-		return nil, errors.New("Failed to verify ID token")
+		return nil, errors.New("failed to verify ID token")
 	}
 	claims := oidcClaims{}
 	if err := idToken.Claims(&claims); err != nil {
-		return nil, errors.New("Failed to get user info")
+		return nil, errors.New("failed to get user info")
 	}
 	return &claims, nil
 }
