@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"authorization_flow_keycloak/internal/auth"
+	"authorization_flow_keycloak/internal/constant"
 	"authorization_flow_keycloak/internal/store"
 
 	"github.com/gin-gonic/gin"
@@ -16,19 +18,25 @@ import (
 )
 
 type AuthHandler struct {
-	authClient *auth.Client
-	authStore  store.AuthStore
+	authClient   *auth.Client
+	authStore    store.AuthStore
+	sessionStore store.SessionStore
 }
 
-func NewAuthHandler(authClient *auth.Client, authStore store.AuthStore) *AuthHandler {
+func NewAuthHandler(
+	authClient *auth.Client,
+	authStore store.AuthStore,
+	sessionStore store.SessionStore,
+) *AuthHandler {
 	return &AuthHandler{
-		authClient: authClient,
-		authStore:  authStore,
+		authClient:   authClient,
+		authStore:    authStore,
+		sessionStore: sessionStore,
 	}
 }
 
-// generateState creates a random state parameter to prevent CSRF attacks
-func generateState() (string, error) {
+// generateRandomSecureString creates a random secure string
+func generateRandomSecureString() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -44,7 +52,7 @@ func generateState() (string, error) {
 // - 302: Redirects to Keycloak login page
 // - 500: Internal Server Error if state generation or storage fails
 func (a *AuthHandler) LoginHandler(c *gin.Context) {
-	state, err := generateState()
+	state, err := generateRandomSecureString()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state"})
 		return
@@ -80,12 +88,47 @@ func (a *AuthHandler) CallbackHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
 		return
 	}
-	oidcClaims, err := a.validateAndGetClaimsIDToken(c, oauthToken)
+	userInfo, err := a.validateAndGetClaimsIDToken(c, oauthToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "Failed to validate and get claims id token"})
 		return
 	}
+	sessionID, err := generateRandomSecureString()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate session ID"})
+		return
+	}
+	// Create session data
+	sessionData := store.SessionData{
+		AccessToken: oauthToken.AccessToken, // From Keycloak
+		UserInfo: store.UserInfo{
+			Username: userInfo.Username,
+			Email:    userInfo.Email,
+		},
+		CreatedAt: time.Now(),
+	}
+	// Store session
+	if err := a.sessionStore.Set(c, sessionID, sessionData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store session"})
+		return
+	}
+	// Set secure session cookie using Gin's methods
+	c.SetCookie(
+		"session_id",                            // name
+		sessionID,                               // value
+		int(constant.SessionDuration.Seconds()), // maxAge in seconds
+		"/",                                     // path
+		"",                                      // domain (empty means default to current domain)
+		true,                                    // secure (HTTPS only)
+		true,                                    // httpOnly (prevents JavaScript access)
+	)
+	// Set SameSite attribute
+	// Note: Gin handles SameSite through the Config struct
+	c.SetSameSite(http.SameSiteStrictMode)
+
+	// Redirect to dashboard using Gin's redirect method
+	c.Redirect(http.StatusTemporaryRedirect, "/dashboard")
 }
 func (a *AuthHandler) validateStateSession(c *gin.Context) error {
 	// Get state from callback parameters

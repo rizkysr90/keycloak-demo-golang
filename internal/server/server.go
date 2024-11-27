@@ -51,7 +51,7 @@ func (s *Server) setupRoutes() {
 	auth := s.router.Group("/auth")
 	{
 		auth.GET("/login", s.authHandler.LoginHandler)
-		auth.GET("/callback", s.handleCallback)
+		auth.GET("/callback", s.authHandler.CallbackHandler)
 	}
 
 }
