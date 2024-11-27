@@ -122,7 +122,7 @@ func (a *AuthHandler) CallbackHandler(c *gin.Context) {
 		int(constant.SessionDuration), // maxAge in seconds
 		"/",                           // path
 		"",                            // domain (empty means default to current domain)
-		false,                         // Set secure to false for HTTP development
+		true,                          // Set secure to false for HTTP development
 		true,                          // httpOnly (prevents JavaScript access)
 	)
 
