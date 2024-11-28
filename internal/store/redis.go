@@ -103,7 +103,7 @@ func NewAuthRedisManager(rds *redis.Client) *RedisAuthManager {
 	return &RedisAuthManager{
 		client:      rds,
 		PrefixState: "stateauth",
-		defaultTTL:  5 * time.Minute,
+		defaultTTL:  2 * time.Minute,
 	}
 }
 func (r *RedisAuthManager) buildKeyState(state string) string {

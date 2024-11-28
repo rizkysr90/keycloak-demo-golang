@@ -46,9 +46,8 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		}
 		// Verify the access token using the OIDC provider
 		token, err := m.authClient.Provider.Verifier(&oidc.Config{
-			SkipClientIDCheck: true,
+			SkipClientIDCheck: true, // Access tokens don't require client ID check
 		}).Verify(c, sessionData.AccessToken)
-
 		if err != nil {
 			// The token is invalid - let's clean up and redirect
 			m.sessionStore.Delete(c, sessionID)
