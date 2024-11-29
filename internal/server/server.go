@@ -87,9 +87,9 @@ func showDashboard(c *gin.Context) {
 	}
 	// Now you can safely use the properly typed sessionData
 	c.HTML(http.StatusOK, "dashboard.tmpl", gin.H{
-		"username": sessionData.UserInfo.Username,
-		"email":    sessionData.UserInfo.Email,
-		"created":  sessionData.CreatedAt,
+		"username":  sessionData.UserInfo.Username,
+		"email":     sessionData.UserInfo.Email,
+		"createdat": sessionData.CreatedAt,
 	})
 }
 func (s *Server) healthCheck(c *gin.Context) {

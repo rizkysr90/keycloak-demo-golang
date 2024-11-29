@@ -157,15 +157,7 @@
             <h2 class="card-title">Session Information</h2>
             <div class="info-item">
                 <div class="info-label">Session Started</div>
-                <div class="info-value">{{ .session.CreatedAt.Format "January 2, 2006 15:04:05" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Session Expires</div>
-                <div class="info-value">{{ .session.ExpiresAt.Format "15:04:05" }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Session ID</div>
-                <div class="session-id">{{ .session.ID }}</div>
+                <div class="info-value">{{ .createdat.Format "January 2, 2006 15:04:05" }}</div>
             </div>
         </div>
     </main>

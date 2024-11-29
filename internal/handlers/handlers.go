@@ -108,6 +108,7 @@ func (a *AuthHandler) CallbackHandler(c *gin.Context) {
 		},
 		CreatedAt: time.Now(),
 	}
+	log.Println("HEREEE : ", sessionData.CreatedAt)
 	// Store session
 	if err := a.sessionStore.Set(c, sessionID, sessionData); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store session"})
